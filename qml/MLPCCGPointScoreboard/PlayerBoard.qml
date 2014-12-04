@@ -13,6 +13,8 @@ Item {
 
     property alias readOnlyName: textField1.readOnly
 
+    property int playerTurn: 0
+
     property int actionPoints: 0
 
     property int seconds: 0
@@ -27,6 +29,7 @@ Item {
 
     signal leave
     signal pass
+    signal undoTurn
 
     function startTurn(ap,turn) {
         actionPoints += ap;
@@ -39,6 +42,31 @@ Item {
         seconds=0;
         actionPoints=0;
         actionList.clear();
+    }
+
+    function scorePoint() {
+
+        if(item1.score==14){
+            if(item1.haveTurn)
+                actionList.append({ info:"Score final point!",  prop:"WIN", val:1, colorCode: "red", date: Date.now() })
+            else
+                actionList.append({ info:"Capture in opponents turn final point!",  prop:"WIN", val:1, colorCode: "red", date: Date.now() });
+            item1.score+=1;
+            return;
+        }
+
+        item1.score+=1;
+
+        var last= actionList.get(actionList.count-1);
+        var textinfo= {"SP":"Score ","AS":"Capture in opponents turn "}[button1.mode];
+        if(last !== undefined && last.prop === button1.mode)
+        {
+            actionList.setProperty(actionList.count-1,"info",textinfo + (last.val + 1) + " points!");
+            actionList.setProperty(actionList.count-1,"val",last.val + 1);
+        } else {
+            actionList.append({ info:textinfo+"point!",  prop:button1.mode, val:1, colorCode: "yellow", date: Date.now() });
+        }
+        listView1.positionViewAtEnd()
     }
 
     Timer {
@@ -62,53 +90,19 @@ Item {
     }
 
     property int phase: 1
-
-    Text {
-        id: text1
-        width: 80
-        height: 80
-        text: item1.score.toString()
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.left: parent.left
-        anchors.leftMargin: 1
-        verticalAlignment: Text.AlignVCenter
-        horizontalAlignment: Text.AlignHCenter
-        font.pixelSize: 70
-    }
     
-    Button {
+    ButtonScore {
         id: button1
-        text: qsTr("Add point")
         anchors.left: parent.left
-        anchors.leftMargin: 1
+        anchors.leftMargin: 5
+        width: item1.width * 0.35
+        height: button1.width*1.2
         property string mode: "SP"
         opacity: 0
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 1
-        onClicked: {
-
-            if(item1.score==14){
-                if(item1.haveTurn)
-                    actionList.append({ info:"Score final point!",  prop:"WIN", val:1, colorCode: "red", date: Date.now() })
-                else
-                    actionList.append({ info:"Capture in opponents turn final point!",  prop:"WIN", val:1, colorCode: "red", date: Date.now() });
-                item1.score+=1;
-                return;
-            }
-
-            item1.score+=1;
-
-            var last= actionList.get(actionList.count-1);
-            var textinfo= {"SP":"Score ","AS":"Capture in opponents turn "}[mode];
-            if(last !== undefined && last.prop === mode)
-            {
-                actionList.setProperty(actionList.count-1,"info",textinfo + (last.val + 1) + " points!");
-                actionList.setProperty(actionList.count-1,"val",last.val + 1);
-            } else {
-                actionList.append({ info:textinfo+"point!",  prop:mode, val:1, colorCode: "yellow", date: Date.now() });
-            }
-            listView1.positionViewAtEnd()
-        }
+        anchors.bottomMargin: 5
+        onClicked: item1.scorePoint()
+        value: item1.score
     }
     
     TextField {
@@ -125,15 +119,6 @@ Item {
         placeholderText: qsTr("Text Field")
     }
 
-    Text {
-        id: text2
-        x: 76
-        text: qsTr("Score")
-        font.pointSize: 15
-        anchors.top: text1.bottom
-        anchors.topMargin: -5
-        anchors.horizontalCenter: text1.horizontalCenter
-    }
 
     Text {
         id: text3
@@ -157,30 +142,6 @@ Item {
         font.pointSize: 15
     }
 
-    Text {
-        id: text4
-        x: -7
-        y: -7
-        width: 89
-        height: 72
-        text: item1.actionPoints.toString()
-        anchors.verticalCenter: parent.verticalCenter
-        font.pointSize: 40
-        anchors.right: parent.right
-        anchors.rightMargin: 1
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-    }
-
-    Text {
-        id: text5
-        x: 479
-        text: qsTr("Action points")
-        anchors.top: text4.bottom
-        anchors.topMargin: 7
-        anchors.horizontalCenter: text4.horizontalCenter
-        font.pointSize: 10
-    }
 
     ListView {
         id: listView1
@@ -215,16 +176,19 @@ Item {
         }
     }
 
-    Button {
+    ButtonPass {
         id: button2
-        text: qsTr("  Pass turn  ")
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 1
         anchors.horizontalCenter: parent.horizontalCenter
+        width: item1.width / 2
+        height: button2.width * 0.229
         opacity: 0
+
         onClicked: {
             item1.pass();
         }
+
     }
 
     Button {
@@ -246,7 +210,7 @@ Item {
     Button {
         id: button4
         text: qsTr("Undo")
-        anchors.bottom: text1.top
+        anchors.bottom: button1.top
         anchors.bottomMargin: 5
         anchors.left: parent.left
         anchors.leftMargin: 1
@@ -265,6 +229,10 @@ Item {
                 } else if( last.prop === "SA" ) {
                     item1.actionPoints += last.val;
                     actionList.remove(actionList.count-1);
+                } else if( last.prop === "ST" ) {
+                    item1.actionPoints -= last.val;
+                    actionList.remove(actionList.count-1);
+                    item1.undoTurn();
                 }
             } else {
                 last= actionList.get(actionList.count-1);
@@ -282,56 +250,51 @@ Item {
         }
     }
 
-    Button {
-        id: button5
-        x: 521
-        text: qsTr("Gain")
-        anchors.right: parent.right
-        anchors.rightMargin: 1
-        anchors.bottom: text4.top
-        anchors.bottomMargin: 0
-        opacity: 0
-        onClicked: {
-            item1.actionPoints+=1;
-            var last= actionList.get(actionList.count-1);
-            var mode= {"true":"GA","false":"CA"}[haveTurn];
-            var textinfo= {"true":"Gain ","false":"Gain in opponents turn "}[haveTurn];
-            if(last !== undefined && last.prop === mode)
-            {
-                actionList.setProperty(actionList.count-1,"info",textinfo + (last.val + 1) + " action points!");
-                actionList.setProperty(actionList.count-1,"val",last.val + 1);
-            } else {
-                actionList.append({ info:textinfo+" action point!",  prop:mode, val:1, colorCode: "blue", date: Date.now() });
-            }
-            listView1.positionViewAtEnd()
+
+    function gainActionPoint() {
+        item1.actionPoints+=1;
+        var last= actionList.get(actionList.count-1);
+        var mode= {"true":"GA","false":"CA"}[haveTurn];
+        var textinfo= {"true":"Gain ","false":"Gain in opponents turn "}[haveTurn];
+        if(last !== undefined && last.prop === mode)
+        {
+            actionList.setProperty(actionList.count-1,"info",textinfo + (last.val + 1) + " action points!");
+            actionList.setProperty(actionList.count-1,"val",last.val + 1);
+        } else {
+            actionList.append({ info:textinfo+" action point!",  prop:mode, val:1, colorCode: "blue", date: Date.now() });
         }
+        listView1.positionViewAtEnd()
     }
 
-    Button {
-        id: button6
-        x: 519
-        y: 234
-        text: qsTr("Spend")
+    ButtonAction {
+        id: button5
+        width: item1.width * 0.3
+        height: button5.width * 1.34
         anchors.right: parent.right
-        anchors.rightMargin: 1
+        anchors.rightMargin: 10
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 1
-        enabled: item1.actionPoints>0
-        onClicked: {
-            item1.actionPoints-=1;
-            var last= actionList.get(actionList.count-1);
-            var mode= {"true":"SA","false":"SCA"}[haveTurn];
-            var textinfo= {"true":"Spend ","false":"Spend in opponents turn "}[haveTurn];
-            if(last !== undefined && last.prop === mode)
-            {
-                actionList.setProperty(actionList.count-1,"info",textinfo + (last.val + 1) + " action points!");
-                actionList.setProperty(actionList.count-1,"val",last.val + 1);
-            } else {
-                actionList.append({ info:textinfo+"action point!",  prop:mode, val:1, colorCode: "green", date: Date.now() });
-            }
-            listView1.positionViewAtEnd()
-        }
+        anchors.bottomMargin: 10
+        value: item1.actionPoints
+        opacity: 0
+        onClickedUp: item1.spendActionPoint()
+        onClickedDown: item1.gainActionPoint()
     }
+
+    function spendActionPoint () {
+                if(item1.actionPoints<=0) return;
+                item1.actionPoints-=1;
+                var last= actionList.get(actionList.count-1);
+                var mode= {"true":"SA","false":"SCA"}[haveTurn];
+                var textinfo= {"true":"Spend ","false":"Spend in opponents turn "}[haveTurn];
+                if(last !== undefined && last.prop === mode)
+                {
+                    actionList.setProperty(actionList.count-1,"info",textinfo + (last.val + 1) + " action points!");
+                    actionList.setProperty(actionList.count-1,"val",last.val + 1);
+                } else {
+                    actionList.append({ info:textinfo+"action point!",  prop:mode, val:1, colorCode: "green", date: Date.now() });
+                }
+                listView1.positionViewAtEnd()
+            }
 
     states: [
         State {
@@ -341,7 +304,6 @@ Item {
 
             PropertyChanges {
                 target: button1
-                text: qsTr(" Capture ")
                 mode:"AS"
                 opacity: 1
             }
@@ -368,7 +330,6 @@ Item {
 
             PropertyChanges {
                 target: button1
-                text: qsTr(" Score ")
                 mode:"SP"
                 opacity: 1
             }

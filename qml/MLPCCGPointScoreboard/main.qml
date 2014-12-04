@@ -20,16 +20,21 @@ Rectangle {
         return 5;
     }
 
+    FontLoader {
+        id: fontCelestiaRedux
+        source: "./fonts/CelestiaMediumRedux1.55.ttf"
+    }
+
     PlayerBoard {
         id: item1
-        y: 834
         name: "Player 1"
 
         haveTurn: rectangle1.player==1
         onHaveTurnChanged: {
-            if(haveTurn) {
-                startTurn(rectangle1.apperturn,rectangle1.turn)
+            if(haveTurn && playerTurn < rectangle1.turn) {
+                startTurn(rectangle1.apperturn,rectangle1.turn);
             }
+            playerTurn= rectangle1.turn;
         }
 
         readOnlyName: rectangle1.player!=0
@@ -47,6 +52,12 @@ Rectangle {
             }
         }
 
+        onUndoTurn: {
+            rectangle1.player=2;
+            if(rectangle1.firstplayer == 2) {
+                rectangle1.turn -= 1;
+            }
+        }
         anchors.left: parent.left
         anchors.leftMargin: 0
         anchors.right: parent.right
@@ -85,6 +96,13 @@ Rectangle {
              if(rectangle1.firstplayer == 1) {
                  rectangle1.turn += 1;
              }
+        }
+
+        onUndoTurn: {
+            rectangle1.player=1;
+            if(rectangle1.firstplayer == 1) {
+                rectangle1.turn -= 1;
+            }
         }
 
         readOnlyName: rectangle1.player!=0

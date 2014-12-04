@@ -22,4 +22,8 @@ ANDROID_PACKAGE_SOURCE_DIR = $$PWD/android
 
 OTHER_FILES += \
     android/AndroidManifest.xml \
-    qml/MLPCCGPointScoreboard/arrow_up_green.svg
+    qml/MLPCCGPointScoreboard/arrow_up_green.svg \
+    qml/MLPCCGPointScoreboard/GameState.js \
+    qml/MLPCCGPointScoreboard/ButtonPass.qml \
+    qml/MLPCCGPointScoreboard/ButtonScore.qml \
+    qml/MLPCCGPointScoreboard/ButtonAction.qml
