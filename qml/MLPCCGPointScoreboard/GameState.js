@@ -1,5 +1,30 @@
 .pragma library
 
-function func() {
+
+function getPhaseName( gameObject ) {
+    return {
+        "":"",
+        "":"",
+        "":"",
+        "":""
+    }[gameObject.state];
+}
+
+/*
+
+
+  */
+
+function nextPhase(gameObject) {
+
+
 
 }
+
+
+function scorePoint(gameObject) {
+
+
+
+}
+

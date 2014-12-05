@@ -1,6 +1,61 @@
 import QtQuick 2.0
 
-Rectangle {
-    width: 100
-    height: 62
+Item {
+    id: button
+
+    signal clicked
+
+    property int  value: -1
+
+    property bool pressed: false
+
+    Image {
+        anchors.fill: parent
+        source: "ButtonScoreUp.svg"
+        sourceSize.width: button.width
+        sourceSize.height: button.height
+        visible: !pressed
+    }
+
+    Image {
+        id: image1
+        anchors.fill: parent
+        anchors.centerIn: parent
+        sourceSize.width: button.width
+        sourceSize.height: button.height
+        source: "ButtonScoreDown.svg"
+        visible: pressed
+    }
+
+
+    MouseArea {
+        anchors.bottomMargin: button.height * 0.05
+        anchors.leftMargin: 0
+        anchors.rightMargin: button.width * 0.40
+        anchors.topMargin: button.height * 0.66
+
+        anchors.fill: parent
+
+         onPressed: {
+             button.pressed=true;
+         }
+         onReleased: {
+             button.pressed=false;
+         }
+
+         onClicked: {
+             button.clicked()
+             button.pressed=false;
+         }
+    }
+
+    Text {
+        id: valueText1
+        text: value.toString()
+        font { family: fontCelestiaRedux.name; pixelSize: button.width*0.3 }
+        anchors.verticalCenterOffset: -0.106 * button.height
+        anchors.horizontalCenterOffset: -0.032 * button.width
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: parent.verticalCenter
+    }
 }
