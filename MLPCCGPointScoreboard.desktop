@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=MLPCCGPointScoreboard
+Exec=qmlscene $@ qml/MLPCCGPointScoreboard/main.qml
+Icon=MLPCCGPointScoreboard.png
+Terminal=false
+Type=Application
+X-Ubuntu-Touch=true
+

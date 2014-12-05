@@ -1,0 +1,17 @@
+{
+    "name": "com.gmail.mlpccgpointscoreboard",
+    "description": "description of MLPCCGPointScoreboard",
+    "architecture": "all",
+    "title": "MLPCCGPointScoreboard",
+    "hooks": {
+        "MLPCCGPointScoreboard": {
+            "apparmor": "MLPCCGPointScoreboard.apparmor",
+            "desktop":  "MLPCCGPointScoreboard.desktop"
+        }
+    },
+    "version": "0.1",
+    "maintainer": "Arpegius Whooves <arpegius.whooves@gmail.com>",
+    "framework" : "ubuntu-sdk-14.10"
+}
+
+
