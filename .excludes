@@ -1,0 +1,8 @@
+Makefile
+*.tmp
+.bzr
+.git
+*.pro
+*.pro.user
+qtquick2applicationviewer
+android
