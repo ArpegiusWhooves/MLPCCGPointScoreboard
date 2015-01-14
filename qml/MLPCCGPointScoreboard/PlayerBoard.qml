@@ -1,23 +1,25 @@
 import QtQuick 2.0
-import Ubuntu.Components 1.1
+//import Ubuntu.Components 1.1
+import QtQuick.Controls 1.1
 
 Item {
     id: item1
     width: 628
     height: 350
     
-    property int score: 0
     property alias name: textField1.text
-
-    property bool haveTurn: false
-
     property alias readOnlyName: textField1.readOnly
 
+    property int score: 0
+    property bool haveTurn: false
     property int playerTurn: 0
-
+    property int playerNumber: -1
     property int actionPoints: 0
-
     property int seconds: 0
+
+    property ListModel actionList
+    property int phase: 1
+    property int turn: 0
 
     function getHistory(){
         var t=[];
@@ -31,9 +33,12 @@ Item {
     signal pass
     signal undoTurn
 
-    function startTurn(ap,turn) {
+    function startTurn(ap,myTurn) {
         actionPoints += ap;
-        actionList.append({ info:"Start turn " +turn+ ", gain "+ap+ " action points.",  prop:"ST", val:ap, colorCode: "green", date: Date.now() });
+        if( myTurn > turn ) {
+            turn= myTurn;
+            actionList.append({ player:playerNumber, info: "[Player" +  playerNumber +  "] Start turn " +turn+ ", gain "+ap+ " action points.",  prop:"ST", val:ap, colorCode: "green", date: Date.now() });
+        };
         listView1.positionViewAtEnd()
     }
 
@@ -48,9 +53,9 @@ Item {
 
         if(item1.score==14){
             if(item1.haveTurn)
-                actionList.append({ info:"Score final point!",  prop:"WIN", val:1, colorCode: "red", date: Date.now() })
+                actionList.append({ player:playerNumber, info:"[Player" +  playerNumber +  "] Score final point!",  prop:"WIN", val:1, colorCode: "red", date: Date.now() })
             else
-                actionList.append({ info:"Capture in opponents turn final point!",  prop:"WIN", val:1, colorCode: "red", date: Date.now() });
+                actionList.append({ player:playerNumber, info:"[Player" +  playerNumber +  "] Capture in opponents turn final point!",  prop:"WIN", val:1, colorCode: "red", date: Date.now() });
             item1.score+=1;
             return;
         }
@@ -58,13 +63,13 @@ Item {
         item1.score+=1;
 
         var last= actionList.get(actionList.count-1);
-        var textinfo= {"SP":"Score ","AS":"Capture in opponents turn "}[button1.mode];
+        var textinfo= "[Player" +  playerNumber +  "] "+ {"SP":"Score ","AS":"Capture in opponents turn "}[button1.mode];
         if(last !== undefined && last.prop === button1.mode)
         {
             actionList.setProperty(actionList.count-1,"info",textinfo + (last.val + 1) + " points!");
             actionList.setProperty(actionList.count-1,"val",last.val + 1);
         } else {
-            actionList.append({ info:textinfo+"point!",  prop:button1.mode, val:1, colorCode: "yellow", date: Date.now() });
+            actionList.append({  player:playerNumber, info:textinfo+"point!",  prop:button1.mode, val:1, colorCode: "yellow", date: Date.now() });
         }
         listView1.positionViewAtEnd()
     }
@@ -84,12 +89,6 @@ Item {
             //actionList.clear();
         }
     }
-
-    ListModel {
-        id: actionList
-    }
-
-    property int phase: 1
     
     ButtonScore {
         id: button1
@@ -108,13 +107,13 @@ Item {
     TextField {
         id: textField1
         height: 40
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 79
         anchors.right: button5.left
         anchors.rightMargin: 1
         anchors.left: button1.right
         anchors.leftMargin: 1
         readOnly: true
-        anchors.top: parent.top
-        anchors.topMargin: 16
         font.pointSize: 18
         placeholderText: qsTr("Text Field")
     }
@@ -123,6 +122,10 @@ Item {
     Text {
         id: text3
         text:getElapsedTime()
+        anchors.bottom: textField1.top
+        anchors.bottomMargin: 50
+        anchors.right: button5.left
+        anchors.rightMargin: 5
 
         function getElapsedTime(){
             if( item1.seconds%60 < 10 ){
@@ -133,47 +136,7 @@ Item {
         }
 
         horizontalAlignment: Text.AlignHCenter
-        anchors.right: parent.right
-        anchors.rightMargin: 1
-        anchors.left: textField1.right
-        anchors.leftMargin: 1
-        anchors.top: parent.top
-        anchors.topMargin: 25
         font.pointSize: 15
-    }
-
-
-    ListView {
-        id: listView1
-        height: 200
-        anchors.right: button5.left
-        anchors.rightMargin: 1
-        anchors.left: button1.right
-        anchors.leftMargin: 1
-        anchors.top: textField1.bottom
-        anchors.topMargin: 5
-        model:  actionList
-        delegate: Item {
-            x: 5
-            width: parent.width / 2.0
-            height: delegatetext1.height
-            Row {
-                id: row1
-                spacing: 5
-                Rectangle {
-                    width: 10
-                    height: delegatetext1.height
-                    color: colorCode
-                }
-
-                Text {
-                    id:delegatetext1
-                    text: info
-                    font.pointSize: 8
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-        }
     }
 
     ButtonPass {
@@ -201,7 +164,7 @@ Item {
         anchors.leftMargin: 1
         opacity: 0
         onClicked: {
-            actionList.append({ info:"Player leave the game!",  prop:"LG", colorCode: "red", date: Date.now() });
+            actionList.append({  player:playerNumber, info:"[Player" +  playerNumber +  "] "+"Player leave the game!",  prop:"LG", colorCode: "red", date: Date.now() });
             listView1.positionViewAtEnd()
             item1.leave();
         }
@@ -232,6 +195,7 @@ Item {
                 } else if( last.prop === "ST" ) {
                     item1.actionPoints -= last.val;
                     actionList.remove(actionList.count-1);
+                    turn--;
                     item1.undoTurn();
                 }
             } else {
@@ -250,18 +214,17 @@ Item {
         }
     }
 
-
     function gainActionPoint() {
         item1.actionPoints+=1;
         var last= actionList.get(actionList.count-1);
         var mode= {"true":"GA","false":"CA"}[haveTurn];
-        var textinfo= {"true":"Gain ","false":"Gain in opponents turn "}[haveTurn];
+        var textinfo= "[Player" +  playerNumber +  "] " + {"true":"Gain ","false":"Gain in opponents turn "}[haveTurn];
         if(last !== undefined && last.prop === mode)
         {
             actionList.setProperty(actionList.count-1,"info",textinfo + (last.val + 1) + " action points!");
             actionList.setProperty(actionList.count-1,"val",last.val + 1);
         } else {
-            actionList.append({ info:textinfo+" action point!",  prop:mode, val:1, colorCode: "blue", date: Date.now() });
+            actionList.append({ player:playerNumber, info:textinfo+" action point!",  prop:mode, val:1, colorCode: "blue", date: Date.now() });
         }
         listView1.positionViewAtEnd()
     }
@@ -285,13 +248,13 @@ Item {
                 item1.actionPoints-=1;
                 var last= actionList.get(actionList.count-1);
                 var mode= {"true":"SA","false":"SCA"}[haveTurn];
-                var textinfo= {"true":"Spend ","false":"Spend in opponents turn "}[haveTurn];
+                var textinfo= "[Player" +  playerNumber +  "] "+ {"true":"Spend ","false":"Spend in opponents turn "}[haveTurn];
                 if(last !== undefined && last.prop === mode)
                 {
                     actionList.setProperty(actionList.count-1,"info",textinfo + (last.val + 1) + " action points!");
                     actionList.setProperty(actionList.count-1,"val",last.val + 1);
                 } else {
-                    actionList.append({ info:textinfo+"action point!",  prop:mode, val:1, colorCode: "green", date: Date.now() });
+                    actionList.append({ player:playerNumber, info:textinfo+"action point!",  prop:mode, val:1, colorCode: "green", date: Date.now() });
                 }
                 listView1.positionViewAtEnd()
             }

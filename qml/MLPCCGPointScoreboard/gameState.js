@@ -1,5 +1,10 @@
 .pragma library
 
+var state = {
+
+
+};
+
 
 function getPhaseName( gameObject ) {
     return {

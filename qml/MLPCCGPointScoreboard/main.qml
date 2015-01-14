@@ -1,5 +1,6 @@
 import QtQuick 2.0
-import Ubuntu.Components 1.1
+//import Ubuntu.Components 1.1
+import QtQuick.Controls 1.1
 
 Rectangle {
     id: rectangle1
@@ -13,7 +14,7 @@ Rectangle {
     property int apperturn: appofscore()
 
     function appofscore() {
-        var max= Math.max( item1.score,item2.score );
+        var max= Math.max( item1.score, item2.score );
         if(max < 2) return 2;
         if(max < 6) return 3;
         if(max < 11) return 4;
@@ -25,11 +26,19 @@ Rectangle {
         source: "./fonts/CelestiaMediumRedux1.55.ttf"
     }
 
+    ListModel {
+        id: actionList
+    }
+
     PlayerBoard {
         id: item1
         name: "Player 1"
 
+        actionList: actionList
+        playerNumber: 1
+
         haveTurn: rectangle1.player==1
+
         onHaveTurnChanged: {
             if(haveTurn && playerTurn < rectangle1.turn) {
                 startTurn(rectangle1.apperturn,rectangle1.turn);
@@ -53,11 +62,10 @@ Rectangle {
         }
 
         onUndoTurn: {
+            rectangle1.turn -= 2;
             rectangle1.player=2;
-            if(rectangle1.firstplayer == 2) {
-                rectangle1.turn -= 1;
-            }
         }
+
         anchors.left: parent.left
         anchors.leftMargin: 0
         anchors.right: parent.right
@@ -77,6 +85,9 @@ Rectangle {
     PlayerBoard {
         id: item2
         name: "Player 2"
+
+        actionList: actionList
+        playerNumber: 2
 
         haveTurn: rectangle1.player==2
         onHaveTurnChanged: {
@@ -99,10 +110,8 @@ Rectangle {
         }
 
         onUndoTurn: {
+            rectangle1.turn -= 2;
             rectangle1.player=1;
-            if(rectangle1.firstplayer == 1) {
-                rectangle1.turn -= 1;
-            }
         }
 
         readOnlyName: rectangle1.player!=0
@@ -122,6 +131,49 @@ Rectangle {
                 wintext2.text= item2.name + qsTr(" wins!");
             }
         }
+    }
+
+    Row {
+        id: image1
+        anchors.centerIn: rectangle1
+        height: rectangle1.width/3
+        Image {
+            width: rectangle1.width/5
+            height: rectangle1.width/4
+            anchors.verticalCenterOffset: 1
+            sourceSize.height: 300
+            sourceSize.width: 200
+            anchors.verticalCenter: parent.verticalCenter
+            rotation: 180
+            source: "./arrow_up_green.svg"
+        }
+        ListView {
+                id: listView1
+                width: rectangle1.width * 0.8
+                height: parent.height
+                model:  actionList
+                delegate: Item {
+                    x: 5
+                    width: parent.width / 2.0
+                    height: delegatetext1.height
+                    Row {
+                        id: row1
+                        spacing: 5
+                        Rectangle {
+                            width: 10
+                            height: delegatetext1.height
+                            color: colorCode
+                        }
+
+                        Text {
+                            id:delegatetext1
+                            text: info
+                            font.pixelSize: parent / 10.5
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                }
+            }
     }
 
     Button {
@@ -148,19 +200,6 @@ Rectangle {
         onClicked: { item1.clear();item2.clear(); rectangle1.turn=1; rectangle1.player=1;rectangle1.firstplayer=2; }
     }
 
-    Image {
-        id: image1
-        x: -207
-        y: 511
-        width: rectangle1.width/5
-        height: rectangle1.width/4
-        anchors.verticalCenterOffset: 1
-        sourceSize.height: 300
-        sourceSize.width: 200
-        anchors.verticalCenter: parent.verticalCenter
-        source: "./arrow_up_green.svg"
-
-    }
 
     Column{
         id: column1
@@ -289,7 +328,7 @@ Rectangle {
                 x: 44
                 y: 311
                 anchors.verticalCenterOffset: 0
-                rotation: 180
+                rotation: 0
             }
             PropertyChanges {
                 target: button1
@@ -310,7 +349,7 @@ Rectangle {
                 x: 44
                 y: 311
                 anchors.verticalCenterOffset: 0
-                rotation: 0
+                rotation: 180
             }
             PropertyChanges {
                 target: button1
