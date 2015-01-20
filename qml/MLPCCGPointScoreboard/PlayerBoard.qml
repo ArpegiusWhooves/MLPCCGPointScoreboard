@@ -11,6 +11,7 @@ Item {
     property alias readOnlyName: textField1.readOnly
 
     property int score: 0
+    property bool startFirst: false
     property bool haveTurn: false
     property int playerTurn: 0
     property int playerNumber: -1
@@ -34,8 +35,8 @@ Item {
     signal undoTurn
 
     function startTurn(ap,myTurn) {
-        actionPoints += ap;
         if( myTurn > turn ) {
+            actionPoints += ap;
             turn= myTurn;
             actionList.append({ player:playerNumber, info: "[Player" +  playerNumber +  "] Start turn " +turn+ ", gain "+ap+ " action points.",  prop:"ST", val:ap, colorCode: "green", date: Date.now() });
         };
@@ -121,9 +122,9 @@ Item {
 
     Text {
         id: text3
-        text:getElapsedTime()
-        anchors.bottom: textField1.top
-        anchors.bottomMargin: 50
+        text:"[" + turn + "] " + getElapsedTime()
+        anchors.bottom: button3.top
+        anchors.bottomMargin: 5
         anchors.right: button5.left
         anchors.rightMargin: 5
 
@@ -160,8 +161,8 @@ Item {
         text: qsTr("Leave")
         anchors.bottom: button4.top
         anchors.bottomMargin: 3
-        anchors.left: parent.left
-        anchors.leftMargin: 1
+        anchors.left: button1.right
+        anchors.leftMargin: 0
         opacity: 0
         onClicked: {
             actionList.append({  player:playerNumber, info:"[Player" +  playerNumber +  "] "+"Player leave the game!",  prop:"LG", colorCode: "red", date: Date.now() });
@@ -173,10 +174,10 @@ Item {
     Button {
         id: button4
         text: qsTr("Undo")
-        anchors.bottom: button1.top
+        anchors.bottom: textField1.top
         anchors.bottomMargin: 5
-        anchors.left: parent.left
-        anchors.leftMargin: 1
+        anchors.left: button1.right
+        anchors.leftMargin: 0
         opacity: 0
         onClicked: {
             var last;

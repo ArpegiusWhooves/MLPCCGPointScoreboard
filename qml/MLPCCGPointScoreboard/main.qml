@@ -37,13 +37,16 @@ Rectangle {
         actionList: actionList
         playerNumber: 1
 
-        haveTurn: rectangle1.player==1
+        startFirst: rectangle1.firstplayer == 1
+
+        haveTurn: rectangle1.player == 1
 
         onHaveTurnChanged: {
-            if(haveTurn && playerTurn < rectangle1.turn) {
+//            if(haveTurn && playerTurn < rectangle1.turn) {
+            if(haveTurn) {
                 startTurn(rectangle1.apperturn,rectangle1.turn);
             }
-            playerTurn= rectangle1.turn;
+//            playerTurn= rectangle1.turn;
         }
 
         readOnlyName: rectangle1.player!=0
@@ -55,14 +58,16 @@ Rectangle {
         }
 
         onPass: {
-             rectangle1.player=2;
-            if(rectangle1.firstplayer == 2) {
+            if(rectangle1.firstplayer == 1) {
                 rectangle1.turn += 1;
             }
+            rectangle1.player=2;
         }
 
         onUndoTurn: {
-            rectangle1.turn -= 2;
+            if(rectangle1.firstplayer == 2) {
+                rectangle1.turn -= 1;
+            }
             rectangle1.player=2;
         }
 
@@ -90,9 +95,11 @@ Rectangle {
         playerNumber: 2
 
         haveTurn: rectangle1.player==2
+        startFirst: rectangle1.firstplayer == 2
+
         onHaveTurnChanged: {
             if(haveTurn) {
-                startTurn(rectangle1.apperturn,rectangle1.turn)
+                startTurn(rectangle1.apperturn,rectangle1.turn);
             }
         }
 
@@ -103,14 +110,16 @@ Rectangle {
         }
 
         onPass: {
+            if(rectangle1.firstplayer == 2) {
+                rectangle1.turn += 1;
+            }
              rectangle1.player=1;
-             if(rectangle1.firstplayer == 1) {
-                 rectangle1.turn += 1;
-             }
         }
 
         onUndoTurn: {
-            rectangle1.turn -= 2;
+            if(rectangle1.firstplayer == 1) {
+                rectangle1.turn -= 1;
+            }
             rectangle1.player=1;
         }
 
@@ -138,6 +147,7 @@ Rectangle {
         anchors.centerIn: rectangle1
         height: rectangle1.width/3
         Image {
+            id: image2
             width: rectangle1.width/5
             height: rectangle1.width/4
             anchors.verticalCenterOffset: 1
@@ -146,6 +156,13 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             rotation: 180
             source: "./arrow_up_green.svg"
+
+            Text {
+                id: text1
+                text: turn
+                anchors.centerIn: parent
+                font.pixelSize: 20
+            }
         }
         ListView {
                 id: listView1
@@ -168,12 +185,12 @@ Rectangle {
                         Text {
                             id:delegatetext1
                             text: info
-                            font.pixelSize: parent / 10.5
+                            font.pixelSize: listView1.height / 10.5
                             anchors.verticalCenter: parent.verticalCenter
                         }
                     }
                 }
-            }
+        }
     }
 
     Button {
