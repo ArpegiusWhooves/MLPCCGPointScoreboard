@@ -5,6 +5,8 @@ Item {
 
     signal clicked
 
+//    property bool enabled: true
+
     property int  value: -1
 
     property bool pressed: false
@@ -29,10 +31,11 @@ Item {
 
 
     MouseArea {
-        anchors.bottomMargin: button.height * 0.05
+        enabled: button.enabled
+//        anchors.bottomMargin: button.height * 0.05
         anchors.leftMargin: 0
-        anchors.rightMargin: button.width * 0.40
-        anchors.topMargin: button.height * 0.66
+        anchors.rightMargin: button.width * 0.20
+        anchors.topMargin: button.height * 0.36
 
         anchors.fill: parent
 

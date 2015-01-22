@@ -27,3 +27,6 @@ OTHER_FILES += \
     qml/MLPCCGPointScoreboard/ButtonPass.qml \
     qml/MLPCCGPointScoreboard/ButtonScore.qml \
     qml/MLPCCGPointScoreboard/ButtonAction.qml
+
+DISTFILES += \
+    qml/MLPCCGPointScoreboard/DailyBackgorund.qml

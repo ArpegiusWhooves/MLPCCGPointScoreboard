@@ -7,6 +7,8 @@ Item {
 
     property bool pressed: false
 
+//    property bool enabled: true
+
     Image {
         anchors.fill: parent
         source: "ButtonPassUp.svg"
@@ -24,8 +26,9 @@ Item {
     }
 
     MouseArea {
-        anchors.rightMargin: button.width / 3
-        anchors.leftMargin: button.width / 3
+        enabled: button.enabled
+        anchors.rightMargin: button.width / 7
+        anchors.leftMargin: button.width / 7
         anchors.fill: parent
 
          onPressed: {

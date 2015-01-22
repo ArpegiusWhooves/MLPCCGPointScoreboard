@@ -3,6 +3,8 @@ import QtQuick 2.0
 Item {
     id: button
 
+//    property bool enabled: true
+
     signal clickedUp
     signal clickedDown
 
@@ -41,10 +43,11 @@ Item {
 
 
     MouseArea {
-        anchors.bottomMargin: button.height * 0.05
-        anchors.leftMargin: button.width * 0.6
-        anchors.rightMargin: button.width * 0.05
-        anchors.topMargin: button.height * 0.75
+        enabled: button.enabled
+//        anchors.bottomMargin: button.height * 0.03
+        anchors.leftMargin: button.width * 0.4
+//        anchors.rightMargin: 0
+        anchors.topMargin: button.height * 0.55
 
         anchors.fill: parent
 
@@ -62,10 +65,11 @@ Item {
     }
 
     MouseArea {
-        anchors.bottomMargin: button.height * 0.75
-        anchors.leftMargin: button.width * 0.6
-        anchors.rightMargin: button.width * 0.05
-        anchors.topMargin: button.height * 0.05
+        enabled: button.enabled
+        anchors.bottomMargin: button.height * 0.55
+        anchors.leftMargin: button.width * 0.4
+//        anchors.rightMargin: button.width * 0.05
+//        anchors.topMargin: button.height * 0.03
 
         anchors.fill: parent
 

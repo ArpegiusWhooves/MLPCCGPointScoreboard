@@ -2,19 +2,113 @@ import QtQuick 2.0
 //import Ubuntu.Components 1.1
 import QtQuick.Controls 1.1
 
+import QtQuick.LocalStorage 2.0
+
 Rectangle {
-    id: rectangle1
+    id: root
     width: 500
     height: 800
 
-    property int turn: 1
+    property int turn: 0
     property int firstplayer: 0
     property int player: 0
 
     property int apperturn: appofscore()
 
+    property var db
+
+
+    Component.onCompleted:  {
+        root.state= "start";
+
+        root.db = LocalStorage.openDatabaseSync("MLPCCGHistory", "1.0", "The Example QML SQL!", 1000000);
+
+        root.db.transaction( function(tx) {
+                // Create the database if it doesn't already exist
+                tx.executeSql('CREATE TABLE IF NOT EXISTS History( name text, data text)');
+
+                // Show all added greetings
+                var rs = tx.executeSql('SELECT name,data FROM History WHERE name = "curent"');
+
+                if(rs.rows.length === 0) {
+                    continue1.visible=false;
+                    tx.executeSql('INSERT INTO History VALUES("curent","")');
+                    return;
+                }
+
+                var o= JSON.parse(rs.rows.item(0).data);
+                if( o === undefined || o == null ) return;
+
+                textField1.text= o.players[0].name;
+                textField2.text= o.players[1].name;
+
+                continue1.visible= o.state == "player1turn" || o.state == "player2turn";
+
+//                if(continue1.visible)
+//                    console.log( "Deserialized: " + JSON.stringify(o));
+
+        } );
+    }
+
+    function load() {
+        root.db.transaction( function(tx) {
+                // Create the database if it doesn't already exist
+                tx.executeSql('CREATE TABLE IF NOT EXISTS History( name text, data text)');
+
+                // Show all added greetings
+                var rs = tx.executeSql('SELECT name,data FROM History WHERE name = "curent"');
+
+                if(rs.rows.length === 0) {
+                    continue1.visible=false;
+                    return;
+                }
+                var o= JSON.parse(rs.rows.item(0).data);
+//                console.log( "Deserialized: " + JSON.stringify(o));
+                root.deserialize(o);
+        } );
+    }
+
+    function getHistory(){
+        var t=[];
+        for( var i= 0; i < actionList.count; ++i ){
+            t.push( actionList.get(i) );
+        }
+        return t;
+    }
+
+    function serialize() {
+        return {
+            state: root.state,
+            turn: root.turn,
+            firstPlayer: root.firstplayer,
+            players: [boardPlayer1.serialize(), boardPlayer2.serialize()],
+            history: getHistory(),
+            player: root.player
+        };
+    }
+
+    function deserialize(o) {
+        root.firstplayer= o.firstPlayer;
+        root.turn=o.turn;
+        actionList.clear();
+        for( var i= 0; i < o.history.length; ++i ){
+            actionList.append( o.history[i] );
+        }
+        boardPlayer1.deserialize(o.players[0]);
+        boardPlayer2.deserialize(o.players[1]);
+        root.player= o.player;
+    }
+
+    function save() {
+        root.db.transaction( function(tx) {
+            var s = JSON.stringify( root.serialize() );
+            tx.executeSql('UPDATE History SET data=? WHERE name="curent"',[JSON.stringify(root.serialize())]);
+//            console.log( s );
+        } );
+    }
+
     function appofscore() {
-        var max= Math.max( item1.score, item2.score );
+        var max= Math.max( boardPlayer1.score, boardPlayer2.score );
         if(max < 2) return 2;
         if(max < 6) return 3;
         if(max < 11) return 4;
@@ -30,45 +124,81 @@ Rectangle {
         id: actionList
     }
 
+    DailyBackgorund
+    {
+        anchors.fill: parent
+        id: background
+        nightEnabled: false
+        progtresTop: boardPlayer2.score / 15
+        progtresBottom: boardPlayer1.score / 15
+    }
+
+    MainLog {
+        id: mainLog
+        anchors.centerIn: root
+        width: Math.min( root.width, root.height/1.3 )
+        height: root.height/2.5
+
+        Text {
+            id: text1
+            text: root.getPlayerName() + " Turn "+ turn
+            anchors.top: mainLog.top
+            anchors.topMargin: 20
+            anchors.horizontalCenter: parent.horizontalCenter
+            font.pixelSize: 30
+            font.family: fontCelestiaRedux.name;
+        }
+
+        HistoryView {
+            id: listView1
+            visible: root.player !== 0
+            anchors.fill: mainLog.paper
+            anchors.leftMargin: 10
+            model:  actionList
+        }
+    }
+
     PlayerBoard {
-        id: item1
+        id: boardPlayer1
         name: "Player 1"
+        enabled: false
+
+        height: Math.min( root.height/2, root.width/2.5)
 
         actionList: actionList
         playerNumber: 1
 
-        startFirst: rectangle1.firstplayer == 1
+        startFirst: root.firstplayer == 1
 
-        haveTurn: rectangle1.player == 1
+        haveTurn: root.player == 1
 
         onHaveTurnChanged: {
-//            if(haveTurn && playerTurn < rectangle1.turn) {
+//            if(haveTurn && playerTurn < root.turn) {
             if(haveTurn) {
-                startTurn(rectangle1.apperturn,rectangle1.turn);
+                startTurn(root.apperturn,root.turn);
             }
-//            playerTurn= rectangle1.turn;
+//            playerTurn= root.turn;
+            root.save();
         }
 
-        readOnlyName: rectangle1.player!=0
-
         onLeave: {
-            rectangle1.player=0;
-            rectangle1.state= "player2win";
-            wintext2.text= item2.name + qsTr(" wins!");
+            root.player=0;
+            root.state= "player2win";
+            root.save();
         }
 
         onPass: {
-            if(rectangle1.firstplayer == 1) {
-                rectangle1.turn += 1;
+            if(root.firstplayer == 1) {
+                root.turn += 1;
             }
-            rectangle1.player=2;
+            root.player=2;
         }
 
         onUndoTurn: {
-            if(rectangle1.firstplayer == 2) {
-                rectangle1.turn -= 1;
+            if(root.firstplayer == 2) {
+                root.turn -= 1;
             }
-            rectangle1.player=2;
+            root.player=2;
         }
 
         anchors.left: parent.left
@@ -80,50 +210,53 @@ Rectangle {
 
         onScoreChanged: {
             if(score >= 15){
-                rectangle1.player=0;
-                rectangle1.state= "player1win";
-                wintext2.text= item1.name + qsTr(" wins!");
+                root.player=0;
+                root.state= "player1win";
             }
         }
+
+
+        property alias name: textField1.text
+
     }
 
     PlayerBoard {
-        id: item2
+        id: boardPlayer2
         name: "Player 2"
+        enabled: false
+
+        height: Math.min( root.height/2, root.width/2.5)
 
         actionList: actionList
         playerNumber: 2
 
-        haveTurn: rectangle1.player==2
-        startFirst: rectangle1.firstplayer == 2
+        haveTurn: root.player==2
+        startFirst: root.firstplayer == 2
 
         onHaveTurnChanged: {
             if(haveTurn) {
-                startTurn(rectangle1.apperturn,rectangle1.turn);
+                startTurn(root.apperturn,root.turn);
             }
         }
 
         onLeave: {
-            rectangle1.player=0;
-            rectangle1.state= "player1win";
-            wintext2.text= item1.name + qsTr(" wins!");
+            root.player=0;
+            root.state= "player1win";
         }
 
         onPass: {
-            if(rectangle1.firstplayer == 2) {
-                rectangle1.turn += 1;
+            if(root.firstplayer == 2) {
+                root.turn += 1;
             }
-             rectangle1.player=1;
+             root.player=1;
         }
 
         onUndoTurn: {
-            if(rectangle1.firstplayer == 1) {
-                rectangle1.turn -= 1;
+            if(root.firstplayer == 1) {
+                root.turn -= 1;
             }
-            rectangle1.player=1;
+            root.player=1;
         }
-
-        readOnlyName: rectangle1.player!=0
 
         anchors.top: parent.top
         anchors.topMargin: 0
@@ -135,112 +268,136 @@ Rectangle {
 
         onScoreChanged: {
             if(score >= 15){
-                rectangle1.player=0;
-                rectangle1.state= "player2win";
-                wintext2.text= item2.name + qsTr(" wins!");
+                root.player=0;
+                root.state= "player2win";
             }
+        }
+
+        property alias name: textField2.text
+
+    }
+
+    Column {
+        visible: root.player == 0
+        anchors.centerIn: parent
+        spacing: root.height / 20
+        TextField {
+            id: textField2
+            y: 0
+            readOnly: root.player!=0
+            font.pointSize: 18
+            text: qsTr("Player 2")
+            placeholderText: qsTr("Player 2")
+            font.family: fontCelestiaRedux.name;
+            rotation: textField2.focus?0:180;
+            Behavior on rotation {
+                SmoothedAnimation{
+                    duration:1000
+                }
+            }
+        }
+        TextField {
+            id: textField1
+            y: 0
+            readOnly: root.player!=0
+            font.pointSize: 18
+            text: qsTr("Player 1")
+            placeholderText: qsTr("Player 1")
+            font.family: fontCelestiaRedux.name;
+
         }
     }
 
-    Row {
-        id: image1
-        anchors.centerIn: rectangle1
-        height: rectangle1.width/3
-        Image {
-            id: image2
-            width: rectangle1.width/5
-            height: rectangle1.width/4
-            anchors.verticalCenterOffset: 1
-            sourceSize.height: 300
-            sourceSize.width: 200
-            anchors.verticalCenter: parent.verticalCenter
-            rotation: 180
-            source: "./arrow_up_green.svg"
+    function getPlayerName() {
+        if(root.player == 1)return textField1.text;
+        if(root.player == 2)return textField2.text;
+    }
 
-            Text {
-                id: text1
-                text: turn
-                anchors.centerIn: parent
-                font.pixelSize: 20
-            }
-        }
-        ListView {
-                id: listView1
-                width: rectangle1.width * 0.8
-                height: parent.height
-                model:  actionList
-                delegate: Item {
-                    x: 5
-                    width: parent.width / 2.0
-                    height: delegatetext1.height
-                    Row {
-                        id: row1
-                        spacing: 5
-                        Rectangle {
-                            width: 10
-                            height: delegatetext1.height
-                            color: colorCode
-                        }
+    function beforeStartGame() {
+        if( textField1.text == "" ) textField1.text = "Player 1";
+        if( textField2.text == "" ) textField1.text = "Player 2";
+        boardPlayer1.turn=0;
+        boardPlayer2.turn=0;
+        boardPlayer1.playerTurn=0;
+        boardPlayer2.playerTurn=0;
+        boardPlayer1.clear();
+        boardPlayer2.clear();
+        readyPlayer1.checked=false;
+        readyPlayer2.checked=false;
+        root.turn=1;
+    }
 
-                        Text {
-                            id:delegatetext1
-                            text: info
-                            font.pixelSize: listView1.height / 10.5
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                }
-        }
+    function startGameFirstPlayer1() {
+        beforeStartGame();
+        root.firstplayer=1;
+        root.player=2;
+        save();
+    }
+
+    function startGameFirstPlayer2() {
+        beforeStartGame();
+        root.firstplayer=2;
+        root.player=1;
+        save();
     }
 
     Button {
-        id: button2
-        text: qsTr("  Start as First Player  ")
+        id: buttonStartPlayer1
+        text: qsTr("  Start as First Player ")
+        anchors.bottomMargin: 50
         anchors.horizontalCenter: parent.horizontalCenter
         opacity: 0
-        anchors.bottom: column1.top
-        anchors.bottomMargin: 10
+        anchors.bottom: mainLog.top
         rotation: 180
         enabled:false
-        onClicked: { rectangle1.firstplayer=2; item1.clear();item2.clear(); rectangle1.turn=1; rectangle1.player=2; }
-
+        onClicked: root.startGameFirstPlayer1();
     }
 
     Button {
-        id: button1
-        text: qsTr("  Start as First Player  ")
+        id: buttonStartPlayer2
+        text: qsTr("  Start as First Player ")
+        anchors.topMargin: 50
         anchors.horizontalCenter: parent.horizontalCenter
         opacity: 0
-        anchors.top: column1.bottom
-        anchors.topMargin: 10
+        anchors.top: mainLog.bottom
         enabled:false
-        onClicked: { item1.clear();item2.clear(); rectangle1.turn=1; rectangle1.player=1;rectangle1.firstplayer=2; }
+        onClicked: root.startGameFirstPlayer2();
     }
 
+    function startRandom() {
+        if(!readyPlayer1.checked) return;
+        if(!readyPlayer2.checked) return;
+        var v = Math.random();
+//        console.log("Random value: "+v);
+        if(v > 0.5){
+            root.startGameFirstPlayer1();
+        }
+        else
+        {
+            root.startGameFirstPlayer2();
+        }
+    }
 
-    Column{
-        id: column1
-
+    CheckBox {
+        id: readyPlayer1
+        x: 167
+        y: 543
+        text: qsTr("I am ready for random choose")
+        opacity: 0
+        rotation: 180
+        anchors.verticalCenter: mainLog.top
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
+        onCheckedChanged: root.startRandom()
+    }
 
-        Text {
-            id: wintext2
-            font.pointSize: 40
-            font.family: "Tahoma"
-            font.bold: true
-            rotation: 180
-            opacity: 0.0
-        }
-        Text {
-            id: wintext1
-            text: wintext2.text
-            font.pointSize: 40
-            font.family: "Tahoma"
-            font.bold: true
-            opacity: 0.0
-        }
-
+    CheckBox {
+        id: readyPlayer2
+        x: 173
+        text: qsTr("I am ready for random choose")
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.verticalCenter: mainLog.bottom
+        opacity: 0
+        onCheckedChanged: root.startRandom()
     }
 
     Button {
@@ -255,42 +412,19 @@ Rectangle {
         onClicked: {
             var req= new XMLHttpRequest();
             req.onreadystatechange = function() {
-                                if (req.readyState == XMLHttpRequest.DONE) {
+                                if (req.readyState === XMLHttpRequest.DONE) {
                                     button3.text = req.responseText;
                                     Qt.openUrlExternally(req.responseText);
                                 }
                             }
             var text= "";
-            var h1=item1.getHistory();
-            var h2=item2.getHistory();
-            var o,name;
-            for( var i=0,j=0; ; ){
-                if( i>=h1.length ) {
-                    if(j>=h2.length) break;
-                    o=h2[j];
-                    name=item2.name;
-                    ++j;
-                } else
-                    if( j>=h2.length )
-                {
-                    o=h1[i];
-                    name=item1.name;
-                    ++i;
-                } else
-                    if( h1[i].date < h2[j].date )
-                {
-                    o=h1[i];
-                    name=item1.name;
-                    ++i;
-                } else
-                {
-                    o=h2[j];
-                    name=item2.name;
-                    ++j;
-                }
-                text += "["+Qt.formatDateTime(new Date(o.date),"yyyy.MM.dd hh:mm:ss")+"] "+name+": "+o.info+"\n";
+
+            for( var i= 0; i < actionList.count; ++i ){
+                var o = actionList.get(i);
+                text += "["+Qt.formatDateTime(new Date(o.date),"yyyy.MM.dd hh:mm:ss")+"] "+o.info+"\n";
             }
-            var title= "MLP CCG " + item1.name +" vs "+ item2.name;
+
+            var title= "MLP CCG " + boardPlayer1.name +" vs "+ boardPlayer2.name;
             var params= "api_option=paste&api_dev_key=ea5baa4b6d8023fd305d9f75cce3b788&api_paste_private=1&api_paste_name="+encodeURIComponent(title)+"&api_paste_code="+encodeURIComponent(text);
             req.open("POST", "http://pastebin.com/api/api_post.php");
             req.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
@@ -300,115 +434,160 @@ Rectangle {
         }
     }
 
-
-    Component.onCompleted:
-    {
-        rectangle1.state= "start";
+    Button {
+        id: continue1
+        text: qsTr("Continue game")
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.right: parent.right
+        rotation: 90
+        opacity: 0
+        onClicked: {
+            root.load();
+        }
     }
+
 
     states: [
         State {
             name: "start"
 
             PropertyChanges {
-                target: image1
-                x: -181
-                y: 511
+                target: mainLog
                 anchors.verticalCenterOffset: 1
             }
 
             PropertyChanges {
-                target: button1
+                target: buttonStartPlayer2
                 opacity: 1
                 enabled:true
             }
             PropertyChanges {
-                target: button2
+                target: buttonStartPlayer1
+                y: 190
                 opacity: 1
                 enabled:true
             }
             PropertyChanges {
-                target: item1
+                target: boardPlayer1
                 anchors.bottomMargin: -64
             }
 
             PropertyChanges {
-                target: item2
+                target: boardPlayer2
                 anchors.topMargin: -76
+            }
+
+            PropertyChanges {
+                target: continue1
+                opacity: 1.0
+            }
+
+            PropertyChanges {
+                target: text1
+                text: qsTr("Select first player")
+            }
+
+            PropertyChanges {
+                target: readyPlayer2
+                x: 159
+                y: 544
+                opacity: 1
+            }
+
+            PropertyChanges {
+                target: readyPlayer1
+                opacity: 1
             }
         },
         State {
             name: "player1turn"
-            when: rectangle1.player==1
+            when: root.player==1
             PropertyChanges {
-                target: image1
-                x: 44
-                y: 311
+                target: mainLog
                 anchors.verticalCenterOffset: 0
                 rotation: 0
             }
             PropertyChanges {
-                target: button1
+                target: buttonStartPlayer2
                 enabled:false
                 opacity: 0
             }
             PropertyChanges {
-                target: button2
+                target: buttonStartPlayer1
                 enabled:false
                 opacity: 0
+            }
+
+            PropertyChanges {
+                target: boardPlayer2
+                enabled: true
+            }
+
+            PropertyChanges {
+                target: boardPlayer1
+                enabled: true
+            }
+
+            PropertyChanges {
+                target: background
+                nightEnabled: true
             }
         },
         State {
             name: "player2turn"
-            when: rectangle1.player==2
+            when: root.player==2
             PropertyChanges {
-                target: image1
-                x: 44
-                y: 311
+                target: mainLog
                 anchors.verticalCenterOffset: 0
                 rotation: 180
             }
             PropertyChanges {
-                target: button1
+                target: buttonStartPlayer2
                 enabled:false
                 opacity: 0
             }
             PropertyChanges {
-                target: button2
+                target: buttonStartPlayer1
                 enabled:false
                 opacity: 0
+            }
+
+            PropertyChanges {
+                target: background
+                nightEnabled: true
+                rotation: 180
+            }
+
+            PropertyChanges {
+                target: boardPlayer1
+                enabled: true
+            }
+
+            PropertyChanges {
+                target: boardPlayer2
+                enabled: true
             }
         },
         State {
             name: "player1win"
-            when: item1.score >= 15
+            when: boardPlayer1.score >= 15
 
             PropertyChanges {
-                target: wintext2
-                opacity: 1.0
-            }
-
-            PropertyChanges {
-                target: wintext1
-                opacity: 1.0
-            }
-
-            PropertyChanges {
-                target: item1
+                target: boardPlayer1
                 anchors.bottomMargin: -64
             }
 
             PropertyChanges {
-                target: item2
+                target: boardPlayer2
                 anchors.topMargin: -76
             }
             PropertyChanges {
-                target: button1
+                target: buttonStartPlayer2
                 enabled:true
                 opacity: 1
             }
             PropertyChanges {
-                target: button2
+                target: buttonStartPlayer1
                 enabled:true
                 opacity: 1
             }
@@ -421,40 +600,40 @@ Rectangle {
             }
 
             PropertyChanges {
-                target: column1
-                spacing: 30
+                target: text1
+                text: boardPlayer1.name + qsTr(" wins!")
+            }
+
+            PropertyChanges {
+                target: readyPlayer2
+                opacity: 1
+            }
+
+            PropertyChanges {
+                target: readyPlayer1
+                opacity: 1
             }
         },
         State {
             name: "player2win"
-            when: item2.score >= 15
+            when: boardPlayer2.score >= 15
 
             PropertyChanges {
-                target: wintext2
-                opacity: 1.0
-            }
-
-            PropertyChanges {
-                target: wintext1
-                opacity: 1.0
-            }
-
-            PropertyChanges {
-                target: item1
+                target: boardPlayer1
                 anchors.bottomMargin: -64
             }
 
             PropertyChanges {
-                target: item2
+                target: boardPlayer2
                 anchors.topMargin: -76
             }
             PropertyChanges {
-                target: button1
+                target: buttonStartPlayer2
                 enabled:true
                 opacity: 1
             }
             PropertyChanges {
-                target: button2
+                target: buttonStartPlayer1
                 enabled:true
                 opacity: 1
             }
@@ -465,6 +644,33 @@ Rectangle {
                 rotation: 180
                 opacity: 1
             }
+
+            PropertyChanges {
+                target: mainLog
+                rotation: 180
+            }
+
+            PropertyChanges {
+                target: text1
+                text: boardPlayer2.name + qsTr(" wins!")
+            }
+
+            PropertyChanges {
+                target: readyPlayer2
+                opacity: 1
+            }
+
+            PropertyChanges {
+                target: readyPlayer1
+                opacity: 1
+                anchors.topMargin: 539
+            }
+        },
+        State {
+            name: "State1"
+        },
+        State {
+            name: "State2"
         }
     ]
 
